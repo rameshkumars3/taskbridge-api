@@ -40,5 +40,15 @@ The human review confirmed four concrete findings in the current Project service
 
 The review did not claim that no outer security layer exists. No controller, Spring Security configuration, schema, or related workflow is present in the reviewed source tree, so compensating controls cannot be verified. The only visible test checks application context startup and does not cover tenant isolation, authorization, validation, rollback, or concurrency.
 
+## Response 6A
+
+The architectural review identified three issues that cannot be safely resolved by Copilot without decisions from the appropriate human owners:
+
+1. **Cross-tenant trust boundary and authorisation.** The service uses unscoped operations such as `findById(projectId)`, `findByTeamId(teamId)`, `save(project)`, and `deleteById(projectId)`. A security or product owner must define how the active organisation comes from trusted identity context, which roles can perform each operation, whether team membership is sufficient, and whether an out-of-scope resource returns `403` or `404`. Copilot can implement the approved tenant-scoped queries, checks, DTOs, and tests after that decision.
+2. **Domain-specific project status transitions.** `Project.status` is an unrestricted `String`, and no valid states or transitions are defined. Copilot cannot safely infer whether transitions such as `DRAFT -> ACTIVE`, `ACTIVE -> COMPLETED`, or `COMPLETED -> DRAFT` are allowed, nor whether approval, audit, or notification side effects are required. A domain owner must define the state machine before Copilot replaces the string or adds transition enforcement.
+3. **Deletion and concurrency policy.** `deleteProject` performs an existence lookup followed by `deleteById`, with no visible transaction or version policy. A product and data-governance owner must decide between hard and soft deletion, retention of audit/dependent records, and optimistic locking requirements. Copilot can then implement the approved transaction and integrity behavior.
+
+These are grounded decision dependencies, not claims that external controls do not exist. The reviewed source tree contains no controller, Spring Security configuration, schema, or related workflow that could establish those policies.
+
 
 

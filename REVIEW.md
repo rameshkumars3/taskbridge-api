@@ -299,3 +299,42 @@ The reviewed code does not enforce multi-tenant boundaries, does not derive iden
 
 No controller, Spring Security configuration, database schema, or outbound workflow is present in the reviewed source tree. Therefore, this review confirms omissions in the service and entity code, but cannot establish whether an external layer adds compensating controls. The existing context-load test does not verify any of these security, transaction, validation, or concurrency behaviors.
 
+## Issues Requiring Human Architectural Decisions
+
+The following issues cannot be safely resolved by Copilot alone because the repository does not define the required product or security policy. They require an explicit decision before implementation.
+
+### 1) Cross-tenant trust boundary and authorisation policy
+
+- Files: `src/main/java/com/taskbridge/projects/ProjectService.java`; `src/main/java/com/taskbridge/projects/ProjectRepository.java`
+- Evidence:
+  - `projectRepository.findById(projectId)`
+  - `projectRepository.findByTeamId(teamId)`
+  - `projectRepository.save(project)`
+  - `projectRepository.deleteById(projectId)`
+- Decision required: Define how the active organisation is derived from the trusted authenticated identity, which roles may read, update, and delete projects, and whether a team member must also have organisation membership. Define whether an out-of-scope resource returns `403 Forbidden` or is deliberately concealed as `404 Not Found`.
+- Why Copilot cannot safely decide: Choosing an identity claim, membership source, permission model, or response policy would establish a security boundary and could create either cross-tenant exposure or an incompatible API contract.
+- Safe implementation after decision: Add organisation-scoped repository queries, service-level membership and permission checks, DTO mapping, and cross-tenant authorization tests using the approved identity source.
+
+### 2) Domain-specific project status state machine
+
+- File: `src/main/java/com/taskbridge/projects/Project.java`
+- Methods: `getStatus`, `setStatus`, `createProject`, `updateProject`
+- Evidence:
+  - `private String status;`
+  - `public void setStatus(String status) { this.status = status; }`
+  - `projectRepository.save(project)`
+- Decision required: Define the valid statuses, initial status, permitted transitions, roles allowed to perform each transition, and any required audit or notification side effects. For example, the repository does not establish whether `DRAFT -> ACTIVE` is valid, whether `ACTIVE -> COMPLETED` requires approval, or whether `COMPLETED -> DRAFT` must be rejected.
+- Why Copilot cannot safely decide: Replacing the string with an enum or adding transition rules without domain approval could encode an incorrect business workflow and affect reporting, audit history, or notifications.
+- Safe implementation after decision: Introduce the approved status type and transition policy, enforce it in the service transaction, and add tests for permitted and rejected transitions.
+
+### 3) Deletion and concurrency policy
+
+- File: `src/main/java/com/taskbridge/projects/ProjectService.java`
+- Method: `deleteProject`
+- Evidence:
+  - `getProjectById(projectId);`
+  - `projectRepository.deleteById(projectId);`
+  - No visible `@Transactional` boundary or `@Version` field.
+- Decision required: Establish whether deletion is hard or soft, whether audit and dependent records must be retained, and whether optimistic locking is required for concurrent updates and deletes.
+- Why Copilot cannot safely decide: These choices affect retention, recovery, compliance, referential integrity, and user-visible behavior.
+
