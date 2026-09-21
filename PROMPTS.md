@@ -28,3 +28,12 @@ Return only Markdown. Do not modify implementation files.”
 
 - Human validation: Saved unchanged for later review.
 
+## Prompt: Security Review of Project Model and Service
+- Mode: Ask
+- Exact prompt: “Act as a senior application security reviewer for a multi-tenant B2B SaaS application. Review the attached unmodified Project model and Project service for files Project.java and ProjectService.java. Check cross-organisation access, authentication, authorisation, IDOR, request-supplied identity, input validation, unsafe database access, sensitive-data exposure, transactions, and concurrency. For every confirmed issue provide file and method, category, severity, exact code evidence, SaaS impact, and recommended correction. Do not modify files and do not report speculative findings.”
+- Result: Confirmed issues were documented in REVIEW.md.
+
+## Prompt: Architecture Review of Project Model and Service
+- Mode: Ask
+- Exact prompt: “Act as a senior Java and Spring Boot architect. Review the unmodified Project model and Project service against .github/copilot-instructions.md. Check model/repository/service/controller separation, Spring Data JPA use, raw database access, DTO/entity separation, validation, transactions, specific exceptions, centralized errors, structured logging, public documentation, query efficiency, naming, type safety, and testability. For every confirmed issue provide file and method, severity, exact evidence, impact, and recommended fix. Do not modify files and do not speculate.”
+- Result: Confirmed architecture findings were documented in REVIEW.md.
