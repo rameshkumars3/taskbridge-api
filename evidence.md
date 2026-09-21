@@ -9,3 +9,7 @@ Operational standards include safe logging practices, automated testing, and con
 ## Response 2A
 
 I used Ask Mode because the supplied task required observing a vague prompt without autonomous workspace-wide changes. The output provided a starting point, but I noticed possible gaps in layering, tenant isolation, validation, authorization, and error handling, which I verified in the formal review.
+
+## Response 3A
+
+I used Ask Mode for a focused architecture review of the unmodified Project model, repository, and service against the repository instructions. The review confirmed that Spring Data JPA and constructor injection are used, but also identified missing DTO/entity separation, service-level transactions, input validation, centralized error handling, bounded collection queries, focused Project tests, structured logging, and public API documentation. No raw database access was found, and no controller-specific defect or speculative naming/type-safety issue was reported because those concerns are not implemented or defined in the current repository.
