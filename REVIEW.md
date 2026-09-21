@@ -98,9 +98,6 @@ Reviewed:
 - Recommended correction:
   - Return DTOs instead of persistence entities and redact or omit fields such as `teamId` or internal status based on caller role and tenant scope.
 
-## Conclusion
-The reviewed code does not enforce multi-tenant boundaries, does not derive identity from a trusted security context, and accepts client-controlled identifiers without ownership checks. The most severe finding is the combination of raw repository access and mutable ID/team values, which creates direct cross-tenant access and IDOR risk.
-
 ## Architecture Review Findings
 
 ### 1) High – Persistence entities are used as the service contract
@@ -205,3 +202,100 @@ The reviewed code does not enforce multi-tenant boundaries, does not derive iden
 - ProjectService uses constructor injection.
 - No controller exists, so no controller-specific separation defect can be confirmed beyond the absence of an API/DTO boundary.
 - No additional naming or type-safety defect was classified because the repository does not define the required domain vocabulary or status type.
+
+## Focused Finding – deleteProject
+
+The selected deletion method combines the following confirmed risks:
+
+### Security and organisation isolation
+- File: src/main/java/com/taskbridge/projects/ProjectService.java
+- Method: `deleteProject`
+- Exact code evidence:
+  - `getProjectById(projectId);`
+  - `projectRepository.deleteById(projectId);`
+- Finding:
+  - Both operations use only the caller-supplied project ID. The method contains no authentication, authorisation, organisation-membership, or tenant-scope check. A caller who can reach the method and obtain another organisation's project ID could delete that project.
+- Recommended correction:
+  - Resolve the active organisation from the trusted authenticated identity and perform an organisation-scoped lookup and delete. Enforce the caller's delete permission before accessing the repository.
+
+### Transaction and concurrency
+- File: src/main/java/com/taskbridge/projects/ProjectService.java
+- Method: `deleteProject`
+- Exact code evidence:
+  - `getProjectById(projectId);`
+  - `projectRepository.deleteById(projectId);`
+  - No `@Transactional` annotation is present on the method.
+- Finding:
+  - The existence check and delete are separate persistence operations without an explicit service-level transaction or visible locking/version check. A concurrent request can remove or change the row after the check and before the delete, producing race-dependent behavior.
+- Recommended correction:
+  - Define the deletion workflow within a service transaction and use an appropriate concurrency strategy where concurrent modifications are supported.
+
+### Validation and data integrity
+- File: src/main/java/com/taskbridge/projects/ProjectService.java
+- Method: `deleteProject`
+- Exact code evidence:
+  - `public void deleteProject(Long projectId) {`
+  - `getProjectById(projectId);`
+  - `projectRepository.deleteById(projectId);`
+- Finding:
+  - The method performs only an existence check. It does not explicitly validate a null or otherwise invalid identifier, confirm that the project is in a deletable state, record an audit event, or preserve a recovery path. `deleteById` is a hard delete, and the visible entity contains no relationship or cascade configuration that documents how dependent records are handled.
+- Recommended correction:
+  - Validate the identifier and deletion preconditions at the service boundary, define the required dependent-record behavior, and apply the product-approved audit or soft-delete policy.
+
+## Conclusion
+The reviewed code does not enforce multi-tenant boundaries, does not derive identity from a trusted security context, and accepts client-controlled identifiers without ownership checks. The most severe finding is the combination of raw repository access and mutable ID/team values, which creates direct cross-tenant access and IDOR risk.
+
+## Human Review Findings
+
+### 1) Critical – Missing organisation scoping and authorisation
+- File: src/main/java/com/taskbridge/projects/ProjectService.java
+- Methods: getAllProjects, getProjectById, getProjectsByTeamId, createProject, updateProject, deleteProject
+- Evidence:
+  - `projectRepository.findAll()`
+  - `projectRepository.findById(projectId)`
+  - `projectRepository.findByTeamId(teamId)`
+  - `projectRepository.save(project)`
+  - `projectRepository.deleteById(projectId)`
+- Finding: No operation derives organisation identity from a trusted authenticated principal or verifies membership and permission before repository access. The repository queries are not organisation-scoped.
+- Impact: If these service methods are reachable through an API, a caller may read, modify, or delete another organisation's project by supplying a project or team identifier.
+- Recommendation: Resolve the active organisation from trusted identity context and use organisation-scoped repository methods for every read and write. Enforce operation-specific permissions before persistence access.
+
+### 2) High – Client-controlled identity and mass assignment
+- Files: src/main/java/com/taskbridge/projects/ProjectService.java; src/main/java/com/taskbridge/projects/Project.java
+- Methods: createProject, updateProject
+- Evidence:
+  - `return projectRepository.save(project);`
+  - `project.setId(projectId);`
+  - Mutable setters for `id`, `teamId`, and `status`
+- Finding: The service accepts a persistence entity directly and permits caller-supplied fields to be saved. The create path does not establish a server-owned identifier, while the update path replaces the entity ID and persists the supplied object.
+- Impact: A client may attempt to overwrite identity, change project ownership metadata, or alter protected state without an explicit field-level authorization decision.
+- Recommendation: Use separate validated request and response DTOs, resolve the existing tenant-scoped entity, and copy only fields permitted by the operation. Generate or assign identifiers server-side.
+
+### 3) High – Update and delete workflows lack explicit transaction and concurrency controls
+- File: src/main/java/com/taskbridge/projects/ProjectService.java
+- Methods: updateProject, deleteProject
+- Evidence:
+  - `getProjectById(projectId);`
+  - `project.setId(projectId);`
+  - `projectRepository.save(project);`
+  - `projectRepository.deleteById(projectId);`
+  - No visible `@Transactional` boundary or `@Version` field
+- Finding: Read-then-write and read-then-delete workflows have no explicit service transaction or optimistic-locking mechanism in the reviewed code.
+- Impact: Concurrent requests can produce stale writes or race-dependent deletion behavior. A failure in a larger multi-step workflow may also leave partial state unless an outer transaction exists.
+- Recommendation: Put each atomic business workflow behind a service transaction and add an appropriate concurrency policy, such as optimistic locking, where concurrent modification is supported.
+
+### 4) Medium – Missing validation and unbounded collection access
+- Files: src/main/java/com/taskbridge/projects/Project.java; src/main/java/com/taskbridge/projects/ProjectService.java
+- Methods: createProject, updateProject, getProjectById, getProjectsByTeamId, getAllProjects
+- Evidence:
+  - Entity fields have no visible Bean Validation constraints.
+  - `return projectRepository.findAll();`
+  - No explicit null, format, length, or status validation is performed before persistence or querying.
+- Finding: Invalid values can reach persistence, and `getAllProjects` loads the entire project table into memory.
+- Impact: Invalid business state may be stored, while large datasets can cause excessive memory use and slow responses.
+- Recommendation: Validate request DTOs and service-level business rules, reject invalid identifiers, and use tenant-scoped pagination for collection queries.
+
+### Review boundary
+
+No controller, Spring Security configuration, database schema, or outbound workflow is present in the reviewed source tree. Therefore, this review confirms omissions in the service and entity code, but cannot establish whether an external layer adds compensating controls. The existing context-load test does not verify any of these security, transaction, validation, or concurrency behaviors.
+
