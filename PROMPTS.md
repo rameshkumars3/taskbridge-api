@@ -62,3 +62,15 @@ Return only Markdown. Do not modify implementation files.”
 - Mode: Agent
 - Exact prompt: “Implement the approved Project remediation plan. Refer to the Remediation Blueprint – Action Map for the Project Slice in REVIEW.md. Create or update the Project entity, ProjectStatus enum, ProjectRepository, ProjectService, request/response DTOs, ProjectController, domain exceptions, global exception handler, and ProjectService tests. Follow .github/copilot-instructions.md. Use Spring Data JPA, constructor injection, organisation-scoped repository operations, trusted organisation context, authorisation, Bean Validation, documented state transitions, specific errors, centralized handling, parameterized SLF4J, appropriate transactions, and Javadoc. Do not modify Notification or Audit code or invent requirements. Show proposed files and the complete diff before applying changes. For unresolved product or security decisions, choose and document the narrowest explicit approach that preserves tenant isolation and existing behavior.”
 - Result: Implemented the Project remediation slice with tenant-scoped access, trusted identity resolution, permission checks, DTO/API separation, validation, status transitions, transactions, exception handling, logging, and focused service tests. No Notification or Audit code was modified.
+
+## Prompt: Final Project Remediation Evidence Capture
+- Mode: Ask
+- Exact prompt: “Act as a senior Java and Spring Boot reviewer. Re-read the approved Project remediation and repository instructions, then confirm the final status of the Project slice, including tenant isolation, trusted identity, DTO separation, validation, status transitions, transaction scope, error handling, logging, and tests. Confirm which product/security decisions were explicitly narrowed, which files changed, and which files remained untouched. Return concise Markdown suitable for evidence.md.”
+- Result: Final status confirmed and summarized as Response 9A in evidence.md.
+- Human validation: The final implementation is aligned with the approved remediation plan and repository instructions.
+
+## Prompt: Modify Only Selected Method
+- Mode: Agent
+- Exact prompt: “Modify only this selected method. Load the project using project ID and trusted organisation ID, verify documented authorisation, validate the operation or state transition, throw a specific domain exception, use parameterized logging without sensitive data, preserve the public contract, and do not modify unrelated code. Show the diff before applying it. 
+- Result: Modified the selected method and summarized the Response 10A in evidence.md.
+- Human validation: The implemented changes are aligned with the functional implementation of the selected method.

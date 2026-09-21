@@ -39,9 +39,11 @@ public class ProjectService {
     public ProjectResponse getProjectById(Long projectId) {
         projectAuthorizer.requireRead();
         validateId(projectId);
-        return projectRepository.findByOrganisationIdAndId(organisation(), projectId)
+        ProjectResponse response = projectRepository.findByOrganisationIdAndId(organisation(), projectId)
                 .map(ProjectResponse::from)
                 .orElseThrow(() -> new ProjectNotFoundException(projectId));
+        LOGGER.debug("Project lookup completed within the authorised organisation scope");
+        return response;
     }
 
     /** Lists projects in a team within the active organisation. */

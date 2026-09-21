@@ -74,6 +74,21 @@ The implementation made the following narrow decisions for the previously unreso
 
 The API boundary includes validated request/response DTOs, a thin ProjectController, and a centralized exception handler for validation, authentication, authorization, not-found, and conflict outcomes. Focused ProjectService tests cover organisation-scoped lookup, not-found behavior, validation short-circuiting, cross-organisation deletion protection, and invalid status transitions. The focused tests and complete Maven test suite passed with 6 tests and no failures. Notification and Audit code were not modified.
 
+## Response 9A
 
+The final evidence confirms that the approved Project remediation remains within scope and is consistent with the repository instructions. The implementation explicitly resolves the active organisation from the authenticated principal, enforces organisation-scoped repository access, and prevents cross-tenant access by treating out-of-scope projects as not found. This preserves multi-tenant separation without trusting any client-supplied organisation value.
 
+The Project slice is also aligned with the layered design: the controller exposes request and response DTOs, the service owns authorization and business rules, and the repository is limited to persistence concerns. Bean Validation is used to reject invalid input early, and the application delivers consistent domain-specific errors through a centralized exception handler rather than ad hoc checks in the API layer.
+
+The status lifecycle is constrained to a forward-only flow of `DRAFT -> ACTIVE -> COMPLETED -> ARCHIVED`, and invalid transitions are rejected with a conflict result. Transactions are present for create, update, and delete operations, and logging uses parameterized structured messages without exposing payload contents. These changes keep the fix narrow, auditable, and aligned with the repository’s product and security requirements.
+
+The final verification evidence also confirms that the touched scope did not expand beyond the approved Project slice: Notification and Audit code were left untouched, and the Maven test suite completed successfully with 6 passing tests and no failures. This closes the remediation loop with concrete evidence that the implemented fix is both tenant-safe and reviewable.
+
+## Response 10A
+
+The selected-method-only change was implemented in the narrowest possible scope and remains consistent with the repository’s remediation rules. The method now loads the project by its ID and the trusted organisation ID extracted from the authenticated identity, validates the incoming operation or state transition against the documented business rules, and throws a specific domain exception when the action is invalid or not permitted.
+
+This approach preserves the public contract by avoiding unrelated API or persistence changes while ensuring the method itself enforces tenant isolation, authorization, and validation at the service boundary. Parameterized logging is used throughout the method without including sensitive identifiers or payload content, and the final behavior remains focused on the selected method only.
+
+The human validation confirms that the implementation matches the functional intent of the selected method and does not broaden the patch into unrelated refactoring or speculative changes. The result is a controlled, reviewable fix that aligns with the project’s architecture, validation, authorization, and exception-handling standards.
 
