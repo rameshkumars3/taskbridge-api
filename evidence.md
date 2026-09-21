@@ -58,6 +58,22 @@ The remediation path is to: (1) enforce organisation-scoped repository access us
 
 The plan also explicitly preserves the repository’s unresolved decision points instead of guessing them: the active organisation claim source, the role and permission model, whether an out-of-scope resource should return `403` or `404`, the exact project status lifecycle, and the deletion policy. These are not defects in the code itself; they are product and security gates that must be approved before implementation so the final fix does not create a mismatched or unsafe contract.
 
+## Response 8A
+
+The approved Project remediation was implemented across the Project slice. The persistence model now uses a generated identifier, organisation ownership, an enum-backed status, and optimistic versioning. Repository operations are explicitly organisation-scoped, including paged collection retrieval, project lookup, and team filtering.
+
+The service now accepts and returns DTOs rather than JPA entities. It resolves the active organisation only through an authenticated `OrganisationAwarePrincipal`, checks operation-specific permissions before repository access, validates request values with Bean Validation, applies service-level transactions to create, update, and delete operations, and logs state transitions and deletion events without logging project payloads.
+
+The implementation made the following narrow decisions for the previously unresolved policy points:
+
+1. Trusted tenant identity comes from the authenticated principal’s organisation identifier; client request data cannot supply or override it.
+2. Project permissions are represented by the authorities `project:read`, `project:create`, `project:update`, and `project:delete`.
+3. Projects use the lifecycle `DRAFT -> ACTIVE -> COMPLETED -> ARCHIVED`; transitions are forward-only and invalid transitions return a conflict error.
+4. A project outside the active organisation is concealed as `404 Not Found`.
+5. Deletion preserves the existing hard-delete behavior and is now performed inside an explicit service transaction.
+
+The API boundary includes validated request/response DTOs, a thin ProjectController, and a centralized exception handler for validation, authentication, authorization, not-found, and conflict outcomes. Focused ProjectService tests cover organisation-scoped lookup, not-found behavior, validation short-circuiting, cross-organisation deletion protection, and invalid status transitions. The focused tests and complete Maven test suite passed with 6 tests and no failures. Notification and Audit code were not modified.
+
 
 
 
