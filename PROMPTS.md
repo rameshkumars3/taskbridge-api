@@ -20,3 +20,11 @@ Return only Markdown. Do not modify implementation files.”
 - Result: Drafted repository-wide instructions.
 - Human validation: Missing or corrected rules: none at this stage; the drafted content is aligned with the TaskBridge requirements and repository guidance as provided.
 
+## Prompt: Required Low-Effort Project Generation
+
+- Mode: Agent
+
+- Exact prompt: Generate a Project model and a Project service with create, update status, get by team, and delete functions. Use a database.
+
+- Human validation: Saved unchanged for later review.
+
