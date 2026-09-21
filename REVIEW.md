@@ -338,3 +338,76 @@ The following issues cannot be safely resolved by Copilot alone because the repo
 - Decision required: Establish whether deletion is hard or soft, whether audit and dependent records must be retained, and whether optimistic locking is required for concurrent updates and deletes.
 - Why Copilot cannot safely decide: These choices affect retention, recovery, compliance, referential integrity, and user-visible behavior.
 
+## Remediation Blueprint – Action Map for the Project Slice
+
+The following changes represent the minimal safe remediation path for the current Project entity, repository, and service. They are grounded in the confirmed findings above and intentionally do not invent business rules that the repository does not define.
+
+### 1) Project entity
+- Replace direct client-controlled identity authority with an internally generated or server-assigned identifier.
+- Remove unnecessary mutability from the public entity contract; keep persisted fields limited to the approved domain model.
+- Add validation at the API boundary and service boundary rather than relying on mutable setter-based persistence.
+- Do not convert the status field into an enum until the valid states and transitions are explicitly approved by product or domain owners.
+
+### 2) Status enum and documented transitions
+- Introduce a `ProjectStatus` enum only after the valid status values, initial state, and permitted transitions are defined.
+- Document the approved lifecycle in code comments and Javadoc; do not guess statuses or transitions without product signoff.
+- Enforce status transition rules in the service layer, not in the repository.
+- If a transition is disallowed, reject it with a domain exception and a consistent API error response.
+
+### 3) Repository and persistence contract
+- Replace unscoped repository access with organisation-scoped methods such as lookup by organisation + id, organisation + team, and organisation-bound list queries.
+- Keep repositories persistence-focused; do not add authorization logic to repository methods.
+- Add pagination and filtering for collection retrieval instead of returning the whole table via `findAll()`.
+- Keep any query method names aligned with the approved domain vocabulary and organisation boundaries.
+
+### 4) Service contract and DTOs
+- Replace entity-first method signatures with request/response DTOs for create, update, list, detail, and delete operations.
+- Resolve the project from the trusted identity context and the caller’s organisation before mutating or reading it.
+- Reject cross-tenant requests using service-layer authorization checks and consistent domain exceptions.
+- Validate identifiers, names, descriptions, and status values before persistence.
+
+### 5) Controller and API boundary
+- Add a thin controller layer that accepts validated DTOs and delegates to the service.
+- Keep controller code free of business logic; use the service for authorization, validation, and transaction orchestration.
+- Return DTO response models, not JPA entities.
+- Relies on a global exception handler for safe, consistent HTTP error payloads.
+
+### 6) Organisation-scoped access and trusted identity
+- Derive the active organisation from the authenticated principal or trusted claims, never from request data.
+- Enforce role/permission checks in the service layer before any repository access.
+- Treat out-of-scope resource access as an explicit security decision, with final policy approved by the product/security owner.
+- Require explicit membership and permission verification for reads, writes, and deletes.
+
+### 7) Authorisation, validation, and exception model
+- Add validation annotations and service guard clauses for required fields, identifier checks, and value constraints.
+- Introduce a narrow domain exception set: `ResourceNotFoundException`, `ValidationException`, `ConflictException`, `DuplicateEntityException`, `UnauthorizedAccessException`, and `ForbiddenOperationException`.
+- Add a global `@ControllerAdvice` to map these exceptions to consistent HTTP responses and safe messages.
+- Ensure errors are centralized, typed, and do not leak internals or sensitive data.
+
+### 8) Transactions and concurrency
+- Apply `@Transactional` to all mutating workflows and multi-step status transitions.
+- Use optimistic locking or a version field only if the product has approved concurrent-modification support.
+- Do not infer a hard-delete or soft-delete strategy without a retention and audit decision.
+- Keep delete operations in an explicit service transaction with a clear business rule for dependent records or recoverability.
+
+### 9) Structured logging and documentation
+- Add SLF4J logging for important transitions, authorization decisions, validation failures, and not-found outcomes.
+- Keep logs concise and avoid raw payloads, secrets, and sensitive project data.
+- Add Javadoc to domain, service, DTO, and controller APIs describing responsibilities, validation rules, permissions, and exceptions.
+- Document the product policy for status lifecycle, ownership scope, and deletion behavior once approved.
+
+### 10) Unit and API test plan
+- Add service unit tests for happy path, validation failures, authorization blocks, not-found, and multi-tenant enforcement.
+- Add API tests for DTO validation, response shape, and forbidden or unauthorized access results.
+- Add repository tests for organisation-scoped queries and data integrity expectations.
+- Add status-transition tests only after the product-defined state machine is approved.
+
+### 11) Required product or security decisions before implementation
+- Which authenticated claim or principal defines the active organisation.
+- Which roles or permissions may read, update, and delete projects.
+- Whether out-of-scope resources return `403` or are concealed as `404`.
+- The approved status values and legal transitions.
+- Whether deletion is hard or soft and whether audits or retention are required.
+
+This remediation plan is intentionally narrow, reviewable, and aligned with the repository instructions. It resolves the confirmed gaps without inventing requirements beyond the explicit product, security, and data-governance decisions that the repository currently leaves undefined.
+

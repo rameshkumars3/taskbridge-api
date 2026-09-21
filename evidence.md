@@ -50,5 +50,14 @@ The architectural review identified three issues that cannot be safely resolved 
 
 These are grounded decision dependencies, not claims that external controls do not exist. The reviewed source tree contains no controller, Spring Security configuration, schema, or related workflow that could establish those policies.
 
+## Response 7A
+
+The updated review resolves the Project findings into an actionable remediation plan without implementing speculative rules beyond the repository’s current product and security constraints. The plan keeps the existing code as the source of truth: the current Project entity is mutable and accepts client-controlled identity values, the repository performs unscoped reads and writes, and the service exposes entity objects without tenant checks or DTO boundaries.
+
+The remediation path is to: (1) enforce organisation-scoped repository access using the trusted authenticated identity, (2) move all public API contracts to DTOs and separate the persistence model from external contracts, (3) add validation and domain exceptions with a global error handler, (4) apply transactional boundaries to create/update/delete flows, (5) define a status policy only after product signoff, and (6) add focused unit and API tests for authorization, validation, multi-tenant enforcement, and not-found behavior.
+
+The plan also explicitly preserves the repository’s unresolved decision points instead of guessing them: the active organisation claim source, the role and permission model, whether an out-of-scope resource should return `403` or `404`, the exact project status lifecycle, and the deletion policy. These are not defects in the code itself; they are product and security gates that must be approved before implementation so the final fix does not create a mismatched or unsafe contract.
+
+
 
 
