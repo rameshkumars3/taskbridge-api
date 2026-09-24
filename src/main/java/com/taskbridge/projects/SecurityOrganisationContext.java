@@ -9,12 +9,25 @@ import org.springframework.stereotype.Component;
 public class SecurityOrganisationContext implements OrganisationContext {
     @Override
     public String currentOrganisationId() {
+        return principal().getOrganisationId();
+    }
+
+    @Override
+    public Long currentUserId() {
+        Long userId = principal().getUserId();
+        if (userId == null || userId < 1) {
+            throw new UnauthorizedAccessException("An authenticated user context is required");
+        }
+        return userId;
+    }
+
+    private OrganisationAwarePrincipal principal() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()
                 || !(authentication.getPrincipal() instanceof OrganisationAwarePrincipal principal)
                 || principal.getOrganisationId() == null || principal.getOrganisationId().isBlank()) {
             throw new UnauthorizedAccessException("An authenticated organisation context is required");
         }
-        return principal.getOrganisationId();
+        return principal;
     }
 }

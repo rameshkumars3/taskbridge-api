@@ -10,6 +10,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /** Application service enforcing project validation, authorisation, and tenant scope. */
 @Service
@@ -20,13 +21,24 @@ public class ProjectService {
     private final OrganisationContext organisationContext;
     private final ProjectAuthorizer projectAuthorizer;
     private final Validator validator;
+    private final AuditService auditService;
+    private final NotificationService notificationService;
 
+    @Autowired
     public ProjectService(ProjectRepository projectRepository, OrganisationContext organisationContext,
-            ProjectAuthorizer projectAuthorizer, Validator validator) {
+            ProjectAuthorizer projectAuthorizer, Validator validator, AuditService auditService,
+            NotificationService notificationService) {
         this.projectRepository = projectRepository;
         this.organisationContext = organisationContext;
         this.projectAuthorizer = projectAuthorizer;
         this.validator = validator;
+        this.auditService = auditService;
+        this.notificationService = notificationService;
+    }
+
+    ProjectService(ProjectRepository projectRepository, OrganisationContext organisationContext,
+            ProjectAuthorizer projectAuthorizer, Validator validator) {
+        this(projectRepository, organisationContext, projectAuthorizer, validator, null, null);
     }
 
     /** Lists only projects visible to the active organisation. */
@@ -61,7 +73,10 @@ public class ProjectService {
         validate(request);
         Project project = Project.create(organisation(), request.name(), request.description(), request.teamId(),
                 request.status());
-        return ProjectResponse.from(projectRepository.save(project));
+        Project saved = projectRepository.save(project);
+        emit(saved, ProjectEventType.PROJECT_CREATED, null, saved.getStatus(),
+            "Project " + saved.getId() + " was created", eventKey(saved, ProjectEventType.PROJECT_CREATED, null, saved.getStatus()));
+        return ProjectResponse.from(saved);
     }
 
     /** Updates a project after resolving it inside the active organisation. */
@@ -72,9 +87,16 @@ public class ProjectService {
         validate(request);
         Project project = projectRepository.findByOrganisationIdAndId(organisation(), projectId)
                 .orElseThrow(() -> new ProjectNotFoundException(projectId));
+        String previousStatus = project.getStatus();
         project.updateDetails(request.name(), request.description(), request.teamId(), request.status());
         LOGGER.info("Project {} transitioned to {}", projectId, request.status());
-        return ProjectResponse.from(projectRepository.save(project));
+        Project saved = projectRepository.save(project);
+        if (!previousStatus.equals(saved.getStatus())) {
+            emit(saved, ProjectEventType.PROJECT_STATUS_CHANGED, previousStatus, saved.getStatus(),
+                "Project " + saved.getId() + " moved to " + saved.getStatus(),
+                eventKey(saved, ProjectEventType.PROJECT_STATUS_CHANGED, previousStatus, saved.getStatus()));
+        }
+        return ProjectResponse.from(saved);
     }
 
     /** Hard-deletes a project within the active organisation. */
@@ -85,7 +107,24 @@ public class ProjectService {
         Project project = projectRepository.findByOrganisationIdAndId(organisation(), projectId)
                 .orElseThrow(() -> new ProjectNotFoundException(projectId));
         projectRepository.delete(project);
+        emit(project, ProjectEventType.PROJECT_DELETED, project.getStatus(), null,
+                "Project " + project.getId() + " was deleted",
+                eventKey(project, ProjectEventType.PROJECT_DELETED, project.getStatus(), null));
         LOGGER.info("Project {} deleted", projectId);
+    }
+
+    private void emit(Project project, ProjectEventType eventType, String previousStatus,
+            String newStatus, String message, String key) {
+        if (auditService == null || notificationService == null) {
+            return;
+        }
+        auditService.record(project.getId(), eventType, previousStatus, newStatus, message, key);
+        notificationService.notifyTeam(project.getId(), project.getTeamId(), eventType, message, key);
+    }
+
+    private String eventKey(Project project, ProjectEventType eventType, String previousStatus, String newStatus) {
+        return organisation() + "|project-" + project.getId() + "|" + eventType + "|"
+                + organisationContext.currentUserId() + "|" + previousStatus + "|" + newStatus;
     }
 
     private String organisation() {

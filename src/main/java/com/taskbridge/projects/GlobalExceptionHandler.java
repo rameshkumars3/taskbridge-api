@@ -1,10 +1,13 @@
 package com.taskbridge.projects;
 
 import java.time.Instant;
+import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 /** Central HTTP mapping for project domain failures. */
 @RestControllerAdvice
@@ -17,6 +20,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ValidationException.class)
     ResponseEntity<ApiError> validation(ValidationException exception) {
         return error(HttpStatus.BAD_REQUEST, exception.getMessage());
+    }
+
+    @ExceptionHandler({MethodArgumentNotValidException.class, ConstraintViolationException.class,
+            MethodArgumentTypeMismatchException.class})
+    ResponseEntity<ApiError> requestValidation(Exception exception) {
+        return error(HttpStatus.BAD_REQUEST, "Request validation failed");
     }
 
     @ExceptionHandler(UnauthorizedAccessException.class)
