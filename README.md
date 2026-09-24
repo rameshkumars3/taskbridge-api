@@ -6,7 +6,7 @@ TaskBridge is a Spring Boot API for organisation-scoped projects, project lifecy
 
 - Java 17
 - Spring Boot 3.5.3
-- Spring Web, Spring Data JPA, Spring Validation, and Spring Security Core
+- Spring Web, Spring Data JPA, Spring Validation, Spring Security, and JWT bearer authentication
 - Hibernate/JPA persistence
 - H2 as the runtime database dependency
 - Maven Wrapper
@@ -29,9 +29,23 @@ Windows commands:
 
 The application name is `taskbridge-api`. With the default configuration it uses Spring Boot's embedded database auto-configuration and `spring.jpa.hibernate.ddl-auto=update`.
 
+Set `APP_JWT_SECRET` to a unique random value of at least 32 characters before starting the application. Tokens expire after 15 minutes by default; this can be changed with `APP_JWT_LIFETIME` using an ISO-8601 duration. To provision the first user, set `APP_BOOTSTRAP_USER_ENABLED=true` together with `APP_BOOTSTRAP_USER_USERNAME`, `APP_BOOTSTRAP_USER_PASSWORD` (at least 12 characters), `APP_BOOTSTRAP_USER_ORGANISATION_ID`, and optionally `APP_BOOTSTRAP_USER_AUTHORITIES`.
+
+Swagger UI is available at `http://localhost:8080/swagger-ui.html`, and the generated OpenAPI document is available at `http://localhost:8080/v3/api-docs`.
+
 ## API
 
 All endpoints are under `/api` and return JSON. Request validation failures return `400` with an `ApiError` body.
+
+### Authentication
+
+| Method | Path | Behavior |
+| --- | --- | --- |
+| `POST` | `/api/auth/login` | Validate persisted credentials and return a short-lived JWT bearer token. |
+
+Send the token on protected requests with `Authorization: Bearer <token>`. The token contains the server-side user ID, organisation ID, and authorities; request payloads cannot override them.
+
+In Swagger UI, click **Authorize** and paste only the raw JWT value into the `bearerAuth` field. Swagger adds the `Bearer` prefix automatically.
 
 ### Projects
 
@@ -66,7 +80,7 @@ Project mutations generate audit and team-notification records for the relevant 
 
 ## Security and Tenant Isolation
 
-The API does not derive tenant or actor identity from request JSON. Services read both from the authenticated `OrganisationAwarePrincipal` in the Spring Security context. Project permissions are checked through these authorities:
+The API derives tenant and actor identity only from a signature-verified JWT and never from request JSON. Services read both from the authenticated `OrganisationAwarePrincipal` in the Spring Security context. Project permissions are checked through these authorities:
 
 - `project:read`
 - `project:create`
@@ -77,13 +91,13 @@ Missing authentication returns `401`; missing permissions or notification owners
 
 ## Assumptions
 
-- The host application supplies authentication and populates an `OrganisationAwarePrincipal`.
+- Users are persisted in the application database and passwords are stored with BCrypt hashes; raw passwords and signing keys are supplied through environment variables.
 - Team membership is supplied through `TeamMemberDirectory`; the included implementation resolves only the current authenticated user after confirming the active organisation.
 - Clients provide unique, stable deduplication keys for direct audit requests and generated project events.
 
 ## Limitations
 
-- This module contains no authentication provider, token parsing, user store, or external team-membership store.
+- JWT access tokens are stateless and short-lived; refresh tokens, token revocation, account lockout, and password reset are not included.
 - The default team directory does not notify multiple team members; deployments must replace it for that behavior.
 - Database schema management is configured as Hibernate `update`; production migrations and an external database configuration are not included.
 - Project deletion is a hard delete. Audit records retain the project ID, but audit history requires the project to still exist.
