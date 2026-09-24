@@ -3,7 +3,10 @@ package com.taskbridge.projects;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.time.Instant;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.MediaType;
@@ -17,6 +20,9 @@ import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
 
@@ -26,10 +32,13 @@ import io.swagger.v3.oas.annotations.security.SecurityScheme;
 public class SecurityConfig {
     private final ObjectMapper objectMapper;
     private final JwtService jwtService;
+    private final String allowedOrigins;
 
-    public SecurityConfig(ObjectMapper objectMapper, JwtService jwtService) {
+    public SecurityConfig(ObjectMapper objectMapper, JwtService jwtService,
+            @Value("${app.web.allowed-origins:http://localhost:4200}") String allowedOrigins) {
         this.objectMapper = objectMapper;
         this.jwtService = jwtService;
+        this.allowedOrigins = allowedOrigins;
     }
 
     @Bean
@@ -53,6 +62,19 @@ public class SecurityConfig {
 
     @Bean
     PasswordEncoder passwordEncoder() { return new BCryptPasswordEncoder(12); }
+
+    @Bean
+    CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(Arrays.stream(allowedOrigins.split(","))
+                .map(String::trim).filter(origin -> !origin.isBlank()).toList());
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        configuration.setAllowCredentials(false);
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
 
         @Bean
         UserDetailsService userDetailsService(ApplicationUserRepository repository) {
