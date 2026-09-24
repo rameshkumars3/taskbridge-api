@@ -1,8 +1,10 @@
 package com.taskbridge.projects;
 
+import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -11,14 +13,23 @@ public class AuditService {
     private final AuditLogRepository repository;
     private final ProjectRepository projectRepository;
     private final OrganisationContext organisationContext;
-        private final ProjectAuthorizer projectAuthorizer;
+    private final ProjectAuthorizer projectAuthorizer;
+    private final HttpServletRequest request;
 
     public AuditService(AuditLogRepository repository, ProjectRepository projectRepository,
             OrganisationContext organisationContext, ProjectAuthorizer projectAuthorizer) {
+        this(repository, projectRepository, organisationContext, projectAuthorizer, null);
+    }
+
+    @Autowired
+    public AuditService(AuditLogRepository repository, ProjectRepository projectRepository,
+            OrganisationContext organisationContext, ProjectAuthorizer projectAuthorizer,
+            HttpServletRequest request) {
         this.repository = repository;
         this.projectRepository = projectRepository;
         this.organisationContext = organisationContext;
         this.projectAuthorizer = projectAuthorizer;
+        this.request = request;
     }
 
     @Transactional
@@ -33,7 +44,8 @@ public class AuditService {
             return existing;
         }
         return repository.save(new AuditLog(organisationId, projectId, organisationContext.currentUserId(), eventType,
-                previousStatus, newStatus, message == null ? null : message.trim(), deduplicationKey));
+            previousStatus, newStatus, message == null ? null : message.trim(), deduplicationKey,
+            actorIpAddress()));
     }
 
     @Transactional(readOnly = true)
@@ -71,9 +83,14 @@ public class AuditService {
         if (eventType == null) {
             throw new ValidationException("eventType is required");
         }
-        if (eventType == ProjectEventType.PROJECT_STATUS_CHANGED
+        if ((eventType == ProjectEventType.PROJECT_STATUS_CHANGED
+            || eventType == ProjectEventType.MILESTONE_REOPENED)
                 && (previousStatus == null || previousStatus.isBlank() || newStatus == null || newStatus.isBlank())) {
             throw new ValidationException("previousStatus and newStatus are required for status changes");
+        }
+        if (eventType == ProjectEventType.MILESTONE_REOPENED
+            && (!"COMPLETED".equals(previousStatus) || !"ACTIVE".equals(newStatus))) {
+            throw new ValidationException("MILESTONE_REOPENED requires COMPLETED to ACTIVE");
         }
         if (message != null && message.trim().length() > 500) {
             throw new ValidationException("message must not exceed 500 characters");
@@ -93,5 +110,13 @@ public class AuditService {
         if (from != null && to != null && from.isAfter(to)) {
             throw new ValidationException("from must be before or equal to to");
         }
+    }
+
+    private String actorIpAddress() {
+        if (request == null) {
+            return null;
+        }
+        String remoteAddress = request.getRemoteAddr();
+        return remoteAddress == null || remoteAddress.isBlank() ? null : remoteAddress;
     }
 }

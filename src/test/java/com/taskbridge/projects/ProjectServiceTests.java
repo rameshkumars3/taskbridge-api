@@ -91,4 +91,19 @@ class ProjectServiceTests {
         verify(notificationService).notifyTeam(isNull(), eq("team-1"),
             eq(ProjectEventType.PROJECT_STATUS_CHANGED), any(String.class), any(String.class));
     }
+
+            @Test
+            void completedProjectCanBeReopenedAndEmitsMilestoneEvent() {
+            Project project = Project.create("org-1", "Alpha", "desc", "team-1", ProjectStatus.COMPLETED);
+            when(repository.findByOrganisationIdAndId("org-1", 1L)).thenReturn(Optional.of(project));
+            when(repository.save(project)).thenReturn(project);
+            ProjectRequest request = new ProjectRequest("Alpha", "desc", "team-1", ProjectStatus.ACTIVE);
+
+            service.updateProject(1L, request);
+
+            verify(auditService).record(isNull(), eq(ProjectEventType.MILESTONE_REOPENED),
+                eq("COMPLETED"), eq("ACTIVE"), any(String.class), any(String.class));
+            verify(notificationService).notifyTeam(isNull(), eq("team-1"),
+                eq(ProjectEventType.MILESTONE_REOPENED), any(String.class), any(String.class));
+            }
 }

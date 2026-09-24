@@ -2,7 +2,7 @@
 
 ## 1. Purpose and scope
 
-This specification defines the immutable audit trail and user-facing notification behavior for TaskBridge project lifecycle events. It is intentionally scoped to the current product intent and the remediation already applied to the Project slice: tenant-scoped access, explicit validation, service-layer authorization, and transaction-safe persistence. The design covers project create, status transition, and delete events and the read model required for auditing and notification review.
+This specification defines the immutable audit trail and user-facing notification behavior for TaskBridge project lifecycle events. It is intentionally scoped to the current product intent and the remediation already applied to the Project slice: tenant-scoped access, explicit validation, service-layer authorization, and transaction-safe persistence. The design covers project create, status transition, milestone reopen, and delete events and the read model required for auditing and notification review.
 
 ### In scope
 - Immutable audit records for project lifecycle events.
@@ -13,9 +13,8 @@ This specification defines the immutable audit trail and user-facing notificatio
 - Validation, authorization, and error handling consistent with the existing project API patterns.
 
 ### Non-goals
-- No milestone lifecycle beyond the existing project workflow.
-- No `MILESTONE_REOPENED` event type.
-- No actor IP capture or storage.
+- No milestone lifecycle beyond reopening a completed project to active.
+- No exposure of actor IP addresses in the public audit response.
 - No notification delivery to external channels such as email, SMS, or push.
 - No soft-delete or archive policy for projects beyond the existing project lifecycle model.
 - No speculative features, custom roles, or new business rules that are not already implied by the remediation and product context.
@@ -101,7 +100,7 @@ Rules:
 - `readAt` is set only when the notification is marked as read.
 - Notification content is derived from the corresponding audit event but must remain intentionally minimal and non-sensitive.
 - Duplicate notifications for the same business event must be suppressed through a stable deduplication key.
-- `eventType` follows the same constrained set as the audit event set, excluding `MILESTONE_REOPENED`.
+- `eventType` follows the same constrained set as the audit event set, including `MILESTONE_REOPENED`.
 
 ---
 
@@ -293,7 +292,8 @@ Typical statuses:
 ### Assumptions
 - Notification delivery is in-app only; the system does not send push or email notifications.
 - The trusted identity and organisation context are already available in the Spring security principal or token claims.
-- Project lifecycle status rules remain the same as the remediated Project status model: `DRAFT -> ACTIVE -> COMPLETED -> ARCHIVED` with forward-only transitions.
+- Project lifecycle status rules are `DRAFT -> ACTIVE -> COMPLETED -> ARCHIVED`, with `COMPLETED -> ACTIVE` allowed for a milestone reopen.
+- Audit actor IP is captured from the server request remote address, never forwarding headers or client payloads, and remains nullable for historical rows.
 - Audit and notification records are persisted in the same database as the project domain or via the same tenant-safe persistence layer.
 
 ### Copilot contribution
@@ -305,4 +305,4 @@ Copilot’s role in this slice is to draft a requirement-aligned contract that r
 - Confirm the final retention and cleanup policy for audit records and notifications.
 - Confirm whether any additional role-specific permissions are required beyond the current organisation-scoped authorizer pattern.
 
-This specification intentionally excludes `MILESTONE_REOPENED` and any actor IP tracking, as requested by the product constraints and the audit-safe design requirements.
+Actor IP is retained only on persisted audit records and is intentionally omitted from the public audit response.

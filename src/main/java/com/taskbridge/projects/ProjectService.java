@@ -92,9 +92,11 @@ public class ProjectService {
         LOGGER.info("Project {} transitioned to {}", projectId, request.status());
         Project saved = projectRepository.save(project);
         if (!previousStatus.equals(saved.getStatus())) {
-            emit(saved, ProjectEventType.PROJECT_STATUS_CHANGED, previousStatus, saved.getStatus(),
+            ProjectEventType eventType = "COMPLETED".equals(previousStatus) && "ACTIVE".equals(saved.getStatus())
+                ? ProjectEventType.MILESTONE_REOPENED : ProjectEventType.PROJECT_STATUS_CHANGED;
+            emit(saved, eventType, previousStatus, saved.getStatus(),
                 "Project " + saved.getId() + " moved to " + saved.getStatus(),
-                eventKey(saved, ProjectEventType.PROJECT_STATUS_CHANGED, previousStatus, saved.getStatus()));
+            eventKey(saved, eventType, previousStatus, saved.getStatus()));
         }
         return ProjectResponse.from(saved);
     }

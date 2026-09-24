@@ -39,6 +39,9 @@ public class AuditLog {
     @Column(name = "actor_user_id", nullable = false)
     private Long actorUserId;
 
+    @Column(name = "actor_ip_address", length = 45)
+    private String actorIpAddress;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "event_type", nullable = false, length = 64)
     private ProjectEventType eventType;
@@ -64,6 +67,13 @@ public class AuditLog {
     public AuditLog(String organisationId, Long projectId, Long actorUserId,
             ProjectEventType eventType, String previousStatus, String newStatus,
             String message, String deduplicationKey) {
+        this(organisationId, projectId, actorUserId, eventType, previousStatus, newStatus,
+            message, deduplicationKey, null);
+        }
+
+        public AuditLog(String organisationId, Long projectId, Long actorUserId,
+            ProjectEventType eventType, String previousStatus, String newStatus,
+            String message, String deduplicationKey, String actorIpAddress) {
         this.organisationId = organisationId;
         this.projectId = projectId;
         this.actorUserId = actorUserId;
@@ -72,6 +82,7 @@ public class AuditLog {
         this.newStatus = newStatus;
         this.message = message;
         this.deduplicationKey = deduplicationKey;
+        this.actorIpAddress = actorIpAddress;
     }
 
     @PrePersist
@@ -119,5 +130,9 @@ public class AuditLog {
 
     public String getDeduplicationKey() {
         return deduplicationKey;
+    }
+
+    public String getActorIpAddress() {
+        return actorIpAddress;
     }
 }

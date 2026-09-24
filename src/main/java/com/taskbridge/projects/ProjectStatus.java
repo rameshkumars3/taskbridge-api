@@ -2,7 +2,7 @@ package com.taskbridge.projects;
 
 /**
  * Project lifecycle. Projects move forward from draft to active, completed,
- * and finally archived; no backward transitions are supported.
+ * and finally archived; completed milestones may be reopened to active.
  */
 public enum ProjectStatus {
     DRAFT,
@@ -14,7 +14,7 @@ public enum ProjectStatus {
         return switch (this) {
             case DRAFT -> nextStatus == ACTIVE;
             case ACTIVE -> nextStatus == COMPLETED;
-            case COMPLETED -> nextStatus == ARCHIVED;
+            case COMPLETED -> nextStatus == ARCHIVED || nextStatus == ACTIVE;
             case ARCHIVED -> false;
         };
     }

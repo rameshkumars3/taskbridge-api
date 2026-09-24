@@ -182,3 +182,23 @@
 - Result and Corrections: Expanded the existing service tests to cover equal notification fan-out, lifecycle status-change audit emission, append-only audit behavior, combined date-range and event-type filtering, cross-organisation audit rejection, unread notification retrieval, and authorized or unauthorized notification read transitions. Tests assert observable results and repository/service boundaries without changing production code.
 - Human Validation: The focused Notification, Audit, and Project service tests passed with 18 successful tests. The complete available test suite passed with 28 successful tests and no failures.
 - Screenshot: N/A
+
+## Prompt: Impact Analysis for MILESTONE_REOPENED and Actor IP Audit Capture
+- Execution Order: 18
+- Exact Prompt:
+  “Act as a senior software architect and privacy-aware security reviewer. Analyze this change without modifying code: add MILESTONE_REOPENED; it triggers audit logging and notifications; audit entries also capture the actor IP address. Identify every affected file/module/model/enum/API/repository/service/controller/test/document, classify each change as additive, breaking, or migration, document database migration, backward compatibility, tenant authorization, privacy, retention, masking, export, logging exposure, IP trust, implementation order, required tests, rollback, assumptions, and how Copilot assisted. Do not modify files.”
+- Mode: Ask
+- Techniques: Impact analysis, architecture review, security and privacy review, tenant-boundary assessment, migration planning, documentation-only analysis
+- Result and Corrections: Documented the full impact assessment in IMPACT_ANALYSIS.md, covering event taxonomy, persistence, API contracts, service flow, security boundaries, DB migration, privacy and retention, implementation sequencing, back-compat risk, rollback, and assumptions. No implementation files were changed.
+- Human Validation: The impact analysis is grounded in the current repository design and current implementation, and it distinguishes feature scope, data privacy, and migration impacts without inventing unsupported requirements.
+- Screenshot: N/A
+
+## Prompt: Implement Approved MILESTONE_REOPENED and Actor IP Audit Capture
+- Execution Order: 19
+- Exact Prompt:
+  “Implement the approved changes from IMPACT_ANALYSIS.md. Add MILESTONE_REOPENED, corresponding audit and team notifications, actor IP on audit records, compatible persistence or migration handling, validation, authorization, and tests. Obtain IP from trusted server request context; do not blindly trust forwarding headers; do not log IP in ordinary logs; preserve older record compatibility; do not modify unrelated behavior. Show the diff before applying changes.”
+- Mode: Agent
+- Techniques: Domain transition implementation, tenant-scoped audit and notification integration, trusted request metadata capture, nullable persistence compatibility, privacy-preserving API design, validation and authorization testing, diff review
+- Result and Corrections: Added the `COMPLETED -> ACTIVE` milestone reopen transition and `MILESTONE_REOPENED` event. Reopen actions use the existing tenant-authorized audit and team-notification fan-out with deduplication. Audit records capture only `HttpServletRequest.getRemoteAddr()`, ignore forwarding headers and client fields, store the nullable value without exposing it in API responses, and preserve older constructor and null-column compatibility. Hibernate schema updates handle the nullable audit column for existing databases. Updated the specification and evidence documentation without changing unrelated runtime behavior.
+- Human Validation: The proposed diff was shown before application. The complete focused test suite passed with 33 successful tests, production diagnostics reported no errors, and `git diff --check` passed.
+- Screenshot: N/A

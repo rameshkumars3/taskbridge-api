@@ -92,3 +92,15 @@ This approach preserves the public contract by avoiding unrelated API or persist
 
 The human validation confirms that the implementation matches the functional intent of the selected method and does not broaden the patch into unrelated refactoring or speculative changes. The result is a controlled, reviewable fix that aligns with the project’s architecture, validation, authorization, and exception-handling standards.
 
+## Response 11A
+
+Adding the audit and notification entities, repositories, services, DTOs, controllers, team-member directory abstraction, event enum, security-context updates, exception handling updates, and focused tests. It also added the approved specification and updated the prompt record.
+
+The persistence layer adds an immutable, append-only `AuditLog` with organisation and project scope, actor user ID, event type, previous and new status snapshots, server-created timestamp, message, and a unique organisation-scoped deduplication key. `Notification` stores organisation, recipient, project, event, title, message, read state, server timestamps, and a per-recipient deduplication key. Repository methods consistently include organisation and recipient or project scope, with indexes supporting the access patterns.
+
+`AuditService` records lifecycle events using the trusted organisation and authenticated actor context, prevents duplicate writes through deduplication, and exposes organisation-scoped history with optional date-range and event-type filters. `NotificationService` fans out the same project event to every valid member of the relevant team, prevents duplicate delivery per recipient, retrieves notifications for the authenticated recipient with optional filters, returns unread records, and permits only that recipient to mark a notification as read. Project creation, status changes, and deletion invoke the audit and notification flow within the existing transactional service operations.
+
+The API layer adds `POST /api/audit`, `GET /api/audit/{projectId}`, `GET /api/notifications/{userId}`, and `PATCH /api/notifications/{id}/read`. Responses use DTOs rather than JPA entities, request validation and path validation are enforced, organisation and user identity come from trusted context rather than request fields, actor IP is captured only from the server remote address and omitted from responses, and centralized exception handling maps validation, authorization, and not-found outcomes. Milestone reopen events use the same tenant-scoped audit and team-notification path.
+
+Tests added or updated cover tenant-scoped audit and notification behavior, idempotent audit recording, equal notification dispatch, filtered audit history, unread retrieval, recipient ownership for read operations, API validation and authorization responses, and Project lifecycle integration. The commit’s recorded Maven validation passed with 16 tests and no failures, including the application context test. Subsequent focused test expansion passed with 28 tests and no failures; those later test-only additions are separate from the reviewed commit.
+

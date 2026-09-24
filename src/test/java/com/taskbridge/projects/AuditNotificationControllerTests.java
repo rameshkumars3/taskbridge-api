@@ -30,7 +30,7 @@ class AuditNotificationControllerTests {
     @Test
     void createsAuditAndDoesNotAcceptOrganisationFromRequest() throws Exception {
         AuditLog audit = new AuditLog("org-1", 7L, 42L, ProjectEventType.PROJECT_CREATED,
-                null, "DRAFT", "created", "org-1|project-7|created");
+                null, "DRAFT", "created", "org-1|project-7|created", "192.0.2.10");
         when(auditService.record(7L, ProjectEventType.PROJECT_CREATED, null, "DRAFT", "created",
                 "org-1|project-7|created")).thenReturn(audit);
 
@@ -43,7 +43,8 @@ class AuditNotificationControllerTests {
                         """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.organisationId").value("org-1"))
-                .andExpect(jsonPath("$.actorUserId").value(42));
+                .andExpect(jsonPath("$.actorUserId").value(42))
+                .andExpect(jsonPath("$.actorIpAddress").doesNotExist());
 
         verify(auditService).record(7L, ProjectEventType.PROJECT_CREATED, null, "DRAFT", "created",
                 "org-1|project-7|created");

@@ -12,6 +12,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import jakarta.validation.Validation;
+import org.springframework.mock.web.MockHttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -53,6 +54,38 @@ class AuditNotificationServiceTests {
         assertThat(result.getActorUserId()).isEqualTo(42L);
         verify(auditRepository).save(any(AuditLog.class));
     }
+
+        @Test
+        void auditUsesRemoteAddressAndIgnoresForwardingHeaders() {
+                MockHttpServletRequest request = new MockHttpServletRequest();
+                request.setRemoteAddr("192.0.2.10");
+                request.addHeader("X-Forwarded-For", "198.51.100.7");
+                auditService = new AuditService(auditRepository, projectRepository, context, authorizer, request);
+                when(auditRepository.findByOrganisationIdAndDeduplicationKey("org-1", "event-ip"))
+                                .thenReturn(Optional.empty());
+                when(auditRepository.save(any(AuditLog.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+                AuditLog result = auditService.record(1L, ProjectEventType.PROJECT_CREATED,
+                                null, "ACTIVE", "created", "event-ip");
+
+                assertThat(result.getActorIpAddress()).isEqualTo("192.0.2.10");
+        }
+
+        @Test
+        void oldAuditConstructorLeavesActorIpNull() {
+                AuditLog audit = new AuditLog("org-1", 1L, 42L, ProjectEventType.PROJECT_CREATED,
+                                null, "ACTIVE", "created", "event-old");
+
+                assertThat(audit.getActorIpAddress()).isNull();
+        }
+
+        @Test
+        void milestoneReopenAuditRequiresCompletedToActive() {
+                assertThatThrownBy(() -> auditService.record(1L, ProjectEventType.MILESTONE_REOPENED,
+                                "ACTIVE", "COMPLETED", "reopen", "event-invalid"))
+                                .isInstanceOf(ValidationException.class);
+                verify(auditRepository, never()).save(any(AuditLog.class));
+        }
 
     @Test
     void auditRejectsInvalidFilterRange() {
@@ -121,6 +154,18 @@ class AuditNotificationServiceTests {
         verify(notificationRepository, org.mockito.Mockito.times(2)).save(saved.capture());
         assertThat(saved.getAllValues()).extracting(Notification::getUserId)
                 .containsExactlyInAnyOrder(42L, 43L);
+    }
+
+    @Test
+    void duplicateMilestoneReopenNotificationIsSuppressed() {
+        when(notificationRepository.findByOrganisationIdAndUserIdAndDeduplicationKey(
+                "org-1", 42L, "reopen-1")).thenReturn(Optional.of(new Notification("org-1", 42L, 1L,
+                        ProjectEventType.MILESTONE_REOPENED, "Project update", "reopened", "reopen-1")));
+
+        notificationService.notifyTeam(1L, "team-1", ProjectEventType.MILESTONE_REOPENED,
+                "reopened", "reopen-1");
+
+        verify(notificationRepository, never()).save(any(Notification.class));
     }
 
     @Test
