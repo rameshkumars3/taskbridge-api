@@ -114,3 +114,69 @@ Validation requires milestone reopen events to represent the `COMPLETED -> ACTIV
 
 The proposed diff was shown before application. Final validation passed with 33 tests, no diagnostics in the touched production files, and no whitespace errors from `git diff --check`. The implementation did not add unrelated behavior or expose sensitive IP data through normal API responses.
 
+## Response 13A
+
+The PR description was drafted from the current repository evidence only and kept within the implemented scope. It includes the required summary, rationale for the change, architecture overview, Project remediation details, Notification/Audit implementation, API integration contract, security and tenant-isolation notes, AI Tool Disclosure, most-used mode, accepted and overridden AI output, a reasonable AI-generated/manual contribution estimate, test coverage evidence, known gaps, one genuine risk/trade-off, self-review checklist, and three specific peer-review comments, including one AI blind spot.
+
+The draft is explicitly grounded in the files and review artifacts already present in the repository, rather than inventing features or requirements. It reflects the actual implementation in the Project, Audit, and Notification slices, the security and multitenant controls present in `OrganisationContext`, `ProjectAuthorizer`, `GlobalExceptionHandler`, and the current project tests, and it does not claim unsupported behavior beyond the visible code and documentation.
+
+The repository evidence used to support the PR description includes the current `ProjectService`, `AuditService`, `NotificationService`, `ProjectController`, `AuditController`, `NotificationController`, the domain models and enums, the repository instructions in `.github/copilot-instructions.md`, the review history in `REVIEW.md`, the design and specification files, and the current Maven test run. The description also makes clear that AI assistance was used for review and architecture sanity checking, but that product and security decisions were kept aligned with the repository’s existing requirements rather than expanded by speculation.
+
+The same evidence also shows the current known limits: the repository does not establish a broader production security configuration beyond the current service-layer checks, no formal retention policy exists for audit and notification data, and the implementation remains deliberately narrow rather than adding broader or speculative business features. Those boundaries are called out in the PR draft as gaps, not hidden claims.
+
+The resulting PR description is therefore a requirement-grounded evidence summary rather than a feature brochure: it records what was implemented, what was validated, what still remains unconfirmed, and how the work fits the project’s current architecture and tenant-isolation model.
+
+## Response 15A
+
+ARCHITECTURE.md and README.md were drafted and verified against the final
+TaskBridge implementation only. ARCHITECTURE.md records the implemented
+relationship between Project, AuditLog, and Notification, the synchronous
+ProjectService integration contract, the Controller-Service-Repository-Entity
+flow, organisation-scoped access, append-only audit behavior, service
+transactions, explicit status and authorization decisions, and the trade-off
+of synchronous persistence without an event broker.
+
+README.md documents the actual Java 17 and Spring Boot stack, prerequisites,
+Maven wrapper commands, implemented project, audit, and notification
+endpoints, trusted-principal security behavior, assumptions about the host
+authentication and team directory, and current limitations such as the
+default single-user team directory, Hibernate schema updates, and hard
+deletion. The documentation does not claim an authentication provider,
+external team-membership store, or other behavior absent from the repository.
+
+Human validation compared both documents with the final controllers,
+services, repositories, entities, security context, `pom.xml`, and available
+tests. No implementation files were changed and no unsupported behavior was
+introduced.
+
+## Response 14A
+
+The Copilot tool strategy was drafted from the recorded prompt history and the
+repository rather than from assumed capabilities. It records seven concrete
+usage entries covering repository guidance, security and architecture review,
+focused method review, Project remediation, Notification/Audit implementation,
+test expansion, and privacy-sensitive impact analysis. Each entry identifies
+the task, reason, outcome, and human verification.
+
+The strategy answers all six required scenarios. For the 600-line legacy
+service, it uses the actual Project-service review as the closest evidence and
+prescribes slice-based review rather than claiming a 600-line service was
+handled. For ten handlers, it records the actual Project, Audit, and
+Notification controller scope and does not claim ten-handler coverage. For JWT
+expiry and tampering, it explicitly states that no JWT implementation or token
+tests are visible. For lint and coverage, it records Maven tests, diagnostics,
+and `git diff --check`, while noting that the build has no lint or coverage
+plugin. It grounds the contractor review in the human Project-service review
+and describes consistent tenant isolation across the visible Project, Audit,
+and Notification slices.
+
+Three genuine limitations are documented with prompt or activity, problem,
+detection, correction, and improved future approach: the authentication
+boundary does not prove JWT behavior; build quality gates do not enforce lint
+or coverage thresholds; and the initial low-effort Project generation required
+human review and remediation. These limitations are presented as evidence
+boundaries, not hidden assumptions or claims of zero limitations.
+
+Human validation confirmed the required-content check and `git diff --check`.
+The strategy remains documentation-only and does not claim unavailable
+features or tests.

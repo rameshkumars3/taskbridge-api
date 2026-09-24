@@ -202,3 +202,44 @@
 - Result and Corrections: Added the `COMPLETED -> ACTIVE` milestone reopen transition and `MILESTONE_REOPENED` event. Reopen actions use the existing tenant-authorized audit and team-notification fan-out with deduplication. Audit records capture only `HttpServletRequest.getRemoteAddr()`, ignore forwarding headers and client fields, store the nullable value without exposing it in API responses, and preserve older constructor and null-column compatibility. Hibernate schema updates handle the nullable audit column for existing databases. Updated the specification and evidence documentation without changing unrelated runtime behavior.
 - Human Validation: The proposed diff was shown before application. The complete focused test suite passed with 33 successful tests, production diagnostics reported no errors, and `git diff --check` passed.
 - Screenshot: N/A
+
+## Prompt: Draft PR Description from Current Repo Evidence
+- Execution Order: 20
+- Exact Prompt:
+  “Draft #file:PR_DESCRIPTION.md using only the current repository evidence. Include summary, why the change was needed, architecture, Project remediation, Notification/Audit implementation, integration contract, security and tenant isolation, AI Tool Disclosure, most-used mode, accepted and overridden AI output, reasonable AI-generated/manual percentages, test coverage, known gaps, one genuine risk/trade-off, self-review checklist, and three specific actionable peer-review comments including one AI blind spot. Do not invent work or features.”
+- Mode: Ask
+- Techniques: Requirement-grounded PR drafting, evidence-based summary, security and architecture traceability, evidence-only documentation
+- Result and Corrections: Drafted the PR description in PR_DESCRIPTION.md using only the existing repository evidence, code, and recorded review artifacts; it stays within the implemented scope and avoids undocumented work or speculative features.
+- Human Validation: The draft is grounded in the repository’s actual implementation, tests, and documented review findings, and it explicitly calls out AI usage, limits, gaps, and review comments without inventing product behavior.
+- Screenshot: N/A
+
+## Prompt: Draft Copilot Tool Strategy
+- Execution Order: 21
+- Exact Prompt:
+  “Draft TOOL_STRATEGY.md using only actual activity in PROMPTS.md and the repository. Include at least six Copilot usage entries covering at least four features. For each entry, state task, reason, outcome, and human verification. Answer the six required scenarios: 600-line legacy service; validation across ten handlers; JWT expiry/tampering; lint and coverage enforcement; contractor service review; consistent tenant isolation. Document three genuine limitations with prompt/activity, problem, detection, correction, and improved future approach. Do not claim unavailable features or zero limitations.”
+- Mode: Agent
+- Techniques: Evidence-based tool-strategy drafting, activity traceability,
+  scenario analysis, limitation tracking, documentation-only editing
+- Result and Corrections: Drafted TOOL_STRATEGY.md from PROMPTS.md and the
+  repository. The document records seven Copilot usage entries, all six
+  required scenarios, and three genuine limitations. It explicitly identifies
+  the absence of JWT implementation evidence, ten-handler coverage, and lint
+  or coverage enforcement rather than claiming those features.
+- Human Validation: Required-content and formatting checks passed. The draft
+  was reviewed against the recorded prompts, repository build configuration,
+  implementation files, tests, and existing evidence documents.
+- Screenshot: N/A
+
+## Prompt: Draft Architecture and README from Final Implementation
+- Execution Order: 22
+- Exact Prompt:
+  “Using only the final TaskBridge implementation, draft:
+
+  1. ARCHITECTURE.md in 10-15 numbered lines covering Project and Notification/Audit relationship, integration contract, Controller-Service-Repository-Entity flow, tenant isolation, audit immutability, transactions, decisions, and trade-offs.
+  2. README.md with stack, prerequisites, build, run, test, endpoints, security, assumptions, and limitations.
+  Do not describe behavior that is not implemented.”
+- Mode: Ask
+- Techniques: Implementation-grounded documentation, architecture summarization, API documentation, scope and limitation verification
+- Result and Corrections: Drafted and verified ARCHITECTURE.md and README.md using only the final TaskBridge implementation. The documents describe the implemented Project, Notification, and Audit flows, tenant controls, transactions, endpoints, assumptions, and limitations without adding unsupported behavior.
+- Human Validation: The documents were checked against the final services, controllers, repositories, entities, security context, project configuration, and available tests. No unimplemented behavior was added.
+- Screenshot: N/A
