@@ -104,3 +104,13 @@ The API layer adds `POST /api/audit`, `GET /api/audit/{projectId}`, `GET /api/no
 
 Tests added or updated cover tenant-scoped audit and notification behavior, idempotent audit recording, equal notification dispatch, filtered audit history, unread retrieval, recipient ownership for read operations, API validation and authorization responses, and Project lifecycle integration. The commit’s recorded Maven validation passed with 16 tests and no failures, including the application context test. Subsequent focused test expansion passed with 28 tests and no failures; those later test-only additions are separate from the reviewed commit.
 
+## Response 12A
+
+The approved impact-analysis changes were implemented as a focused extension of the existing Project, Audit, and Notification flows. `MILESTONE_REOPENED` is now a supported event, emitted when an authorised project update reopens a completed project to the active state. The event uses the existing tenant-scoped audit and team-notification fan-out, stable deduplication keys, and the current service transaction boundary. Other lifecycle behavior remains unchanged.
+
+Audit records now have a nullable `actor_ip_address` field. The value is obtained only from the server request’s `HttpServletRequest.getRemoteAddr()` context; `X-Forwarded-For` and similar client-controlled headers are ignored, and no IP value is accepted from the request DTO. IP addresses are not written to ordinary operational logs and are omitted from `AuditResponse`, preventing raw IP exposure through the public audit API. The existing audit constructor remains compatible, and null values preserve reads of historical rows. Hibernate schema update handling adds the nullable column for existing databases without requiring historical records to be rewritten.
+
+Validation requires milestone reopen events to represent the `COMPLETED -> ACTIVE` transition. Existing organisation, project, permission, actor, recipient, and deduplication checks remain in force, so clients cannot use the new event to bypass tenant or authorization boundaries. Tests cover reopen audit emission, team notification, duplicate suppression, invalid transition rejection, trusted remote-address capture, forwarding-header rejection, old-record null compatibility, API IP omission, and application context startup.
+
+The proposed diff was shown before application. Final validation passed with 33 tests, no diagnostics in the touched production files, and no whitespace errors from `git diff --check`. The implementation did not add unrelated behavior or expose sensitive IP data through normal API responses.
+
