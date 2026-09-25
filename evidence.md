@@ -126,29 +126,6 @@ The same evidence also shows the current known limits: the repository does not e
 
 The resulting PR description is therefore a requirement-grounded evidence summary rather than a feature brochure: it records what was implemented, what was validated, what still remains unconfirmed, and how the work fits the project’s current architecture and tenant-isolation model.
 
-## Response 15A
-
-ARCHITECTURE.md and README.md were drafted and verified against the final
-TaskBridge implementation only. ARCHITECTURE.md records the implemented
-relationship between Project, AuditLog, and Notification, the synchronous
-ProjectService integration contract, the Controller-Service-Repository-Entity
-flow, organisation-scoped access, append-only audit behavior, service
-transactions, explicit status and authorization decisions, and the trade-off
-of synchronous persistence without an event broker.
-
-README.md documents the actual Java 17 and Spring Boot stack, prerequisites,
-Maven wrapper commands, implemented project, audit, and notification
-endpoints, trusted-principal security behavior, assumptions about the host
-authentication and team directory, and current limitations such as the
-default single-user team directory, Hibernate schema updates, and hard
-deletion. The documentation does not claim an authentication provider,
-external team-membership store, or other behavior absent from the repository.
-
-Human validation compared both documents with the final controllers,
-services, repositories, entities, security context, `pom.xml`, and available
-tests. No implementation files were changed and no unsupported behavior was
-introduced.
-
 ## Response 14A
 
 The Copilot tool strategy was drafted from the recorded prompt history and the
@@ -180,3 +157,26 @@ boundaries, not hidden assumptions or claims of zero limitations.
 Human validation confirmed the required-content check and `git diff --check`.
 The strategy remains documentation-only and does not claim unavailable
 features or tests.
+
+## Response 15A
+
+ARCHITECTURE.md and README.md were drafted and verified against the final
+TaskBridge implementation only. ARCHITECTURE.md records the implemented
+relationship between Project, AuditLog, and Notification, the synchronous
+ProjectService integration contract, the Controller-Service-Repository-Entity
+flow, organisation-scoped access, append-only audit behavior, service
+transactions, explicit status and authorization decisions, and the trade-off
+of synchronous persistence without an event broker.
+
+README.md documents the actual Java 17 and Spring Boot stack, prerequisites,
+Maven wrapper commands, implemented project, audit, and notification
+endpoints, trusted-principal security behavior, assumptions about the host
+authentication and team directory, and current limitations such as the
+default single-user team directory, Hibernate schema updates, and hard
+deletion. The documentation does not claim an authentication provider,
+external team-membership store, or other behavior absent from the repository.
+
+Human validation compared both documents with the final controllers,
+services, repositories, entities, security context, `pom.xml`, and available
+tests. No implementation files were changed and no unsupported behavior was
+introduced.
